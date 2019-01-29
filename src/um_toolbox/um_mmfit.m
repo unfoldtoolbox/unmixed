@@ -72,30 +72,30 @@ fprintf('um_mmfit: Starting with model fit \n')
 tic
 % this ensures that our overwritting rank function is removed even on ctrl+c
 cleanupObj = onCleanup(@cleanMeUp);
-addpath('src\um_toolbox\temporaryFunctions\rank')
+addpath(fullfile('src','um_toolbox','temporaryFunctions','rank'))
 
 switch cfg.optimizer
     case 'quasinewton'
         model = classreg.regr.lmeutils.StandardLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
-            cfg.fitMethod,true,dostats,'Optimizer','quasinewton','OptimizerOptions',struct('Display','Iter'));
+            cfg.fitMethod,true,dostats,'Optimizer','quasinewton','OptimizerOptions',struct('Display','Iter','MaxFunctionEvaluations',40000));
     case 'fminunc'
         model = classreg.regr.lmeutils.StandardLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
-            cfg.fitMethod,true,dostats,'Optimizer','fminunc','OptimizerOptions',optimoptions('fminunc','Display','Iter'));
+            cfg.fitMethod,true,dostats,'Optimizer','fminunc','OptimizerOptions',optimoptions('fminunc','Display','Iter','MaxFunctionEvaluations',40000));
     case {'bobyqa','fminsearch'}
         if strcmp(cfg.optimizer,'bobyqa')
             % we activate the bobyq optimizer by overwriting the fminsearch
             % function
-            addpath('src\um_toolbox\temporaryFunctions\bobyqa')
+            addpath(fullfile('src','um_toolbox','temporaryFunctions','bobyqa'))
         end
         model = classreg.regr.lmeutils.StandardLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
-            cfg.fitMethod,true,dostats,'Optimizer','fminsearch','OptimizerOptions',struct('MaxFunEvals',10000));
+            cfg.fitMethod,true,dostats,'Optimizer','fminsearch','OptimizerOptions',struct('MaxFunEvals',40000));
         
 end
-rmpath(genpath('src\um_toolbox\temporaryFunctions\'))
+rmpath(genpath(fullfile('src','um_toolbox','temporaryFunctions')))
 toc
 end
 
 function cleanMeUp()
-rmpath('src\um_toolbox\temporaryFunctions\rank')
-rmpath('src\um_toolbox\temporaryFunctions\bobyqa')
+rmpath(fullfile('src','um_toolbox','temporaryFunctions','rank'))
+rmpath(fullfile('src','um_toolbox','temporaryFunctions','bobyqa'))
 end
