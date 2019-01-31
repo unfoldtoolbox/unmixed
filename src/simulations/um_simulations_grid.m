@@ -88,7 +88,7 @@ cfg.srate= varargin{3};%10;
 cfg.datalength = varargin{4};%60;
 cfg.nsubject = varargin{5};%25;
 cfg.optimizer = varargin{6};%'fminunc';%
-
+cfg.covariance = varargin{7}; %FullCholesky,'Diagonal'
 
 rng(1)
 input = [];

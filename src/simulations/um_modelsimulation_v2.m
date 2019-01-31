@@ -1,37 +1,15 @@
-cfg = [];
-cfg.timelimits = [-0.1,1.2];
-cfg.noise = 20;
-cfg.srate= 50;
-cfg.datalength = 60;
-cfg.nsubject = 25;
-cfg.optimizer = 'fminunc';%{'fminunc','quasinewton','fminsearch','bobyqa'};
+timelimits = [-0.5,2];
+noise=10;
+srate=100;
+datalength=600;
+nsubject=40;
+optim = 'bobyqa';
 
-rng(1)
-input = [];
-for k = 1:cfg.nsubject
-    input{k} = simulate_data_lmm('noise',cfg.noise,...
-        'srate',cfg.srate,'datasamples',cfg.datalength*cfg.srate,...
-        'basis','dirac');
-end
+model = um_simulations_grid(timelimits,noise,srate,datalength,nsubject,optim)
 
-
-EEG = um_designmat(input,'eventtypes','sim','formula','y~1+b+(1+b|subject)');
-EEG= um_timeexpandDesignmat(EEG,'timelimits',cfg.timelimits);
-
-
-result = cfg;
-tic
-result.model = um_mmfit(EEG,input,'channel',1,'optimizer',cfg.optim);
-result.timing = toc;
-
-save(DataHash(cfg),'result')
-
-% model_fminunc
-% model = model_qn
-% model = model_fminunc
 %% Plotting
 
-model = result(4).model;
+
 R = model.Psi.NumBlocks;
 covtable = cell(R,1);
 covmat = covtable;
