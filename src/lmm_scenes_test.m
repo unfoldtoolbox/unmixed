@@ -25,7 +25,7 @@ EEG = um_designmat(input,'eventtypes','fixation','formula','y~1+spl(sac_amp_inco
 EEG= um_timeexpandDesignmat(EEG,'timelimits',[-0.1,0.5]);
 
 %%
-model_fv = um_mmfit(EEG,input,'channel',1,'optimizer','bobyqa','covariance','Diagonal');
+model_fv = um_mmfit(EEG,input,'channel',1,'optimizer','bobyqa','covariance','FullCholesky');
 
 save(['model_scene_' DataHash(model_fv)],'model_fv')
 % model_fminunc, model_q
@@ -67,7 +67,7 @@ if 1 == 0
     figure,
     nTimeshifts = model.Psi.NumBlocks;
     subplot(2,nTimeshifts,1:nTimeshifts);
-    plot(reshape(model.betaHat,nTimeshifts,2),'o-')
+    plot(reshape(model.betaHat,nTimeshifts,[]),'o-')
     for k = 1:R
         subplot(2,nTimeshifts,nTimeshifts + k);
         imagesc(covmat{k})
