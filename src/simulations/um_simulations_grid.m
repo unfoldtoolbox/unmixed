@@ -3,23 +3,31 @@ if 1 == 0
     %% donders specific Grid start
    addpath('/home/common/matlab/fieldtrip/qsub')
    cfg =[];
-   cfg.timelimits = {[-.1 0.5],[-.1 1.2]};
-   cfg.noise = {20 10 5 1 40};
-   cfg.srate = {20 50 150};
-   cfg.datalength = {600};
-   cfg.nsubject = {10 25 50};
-   optimizer = {'fminunc','quasinewton','fminsearch'};
-%    optimizer = {'bobyqa'};
+   cfg.timelimits = {[-.2 1.2],[-.1 2]};
+   cfg.noise = {20 1 40};
+   cfg.srate = {100 50 150 250};
+   cfg.datalength = {600,60,300}; %in s
+   cfg.nsubject = {20 30 50 70};
+   %optimizer = {'fminunc','quasinewton','fminsearch'};
+   optimizer = {'bobyqa'};
+   cfg.covariance = {'fullCholesky','full','diagonal'};
    for optim= optimizer
        for fn = fieldnames(cfg)'
+           
+           % in order to not check out the complete grid of all
+           % combinations, we set a default and vary the parameter in one
+           % dimension only
+           
+           % set the first value as the default
            for fnDefault = fieldnames(cfg)'
                eval(sprintf('%s = cfg.%s{1};',fnDefault{1},fnDefault{1}))
            end
            
+           % calculate all variations in the other dimensions
            for k = 1:length(cfg.(fn{1}))
                eval(sprintf('%s = cfg.%s{%i};',fn{1},fn{1},k))
                
-               qsubfeval(@um_simulations_grid,timelimits,noise,srate,datalength,nsubject,optim{1},'memreq',2*1024^3,'timreq',60*2*60)
+               qsubfeval(@um_simulations_grid,timelimits,noise,srate,datalength,nsubject,optim{1},covariance,'memreq',2*1024^3,'timreq',60*20*60)
            end
        end
    end
@@ -89,13 +97,14 @@ cfg.datalength = varargin{4};%60;
 cfg.nsubject = varargin{5};%25;
 cfg.optimizer = varargin{6};%'fminunc';%
 cfg.covariance = varargin{7}; %FullCholesky,'Diagonal'
+cfg.basisshape = 'hanning';
 
 rng(1)
 input = [];
 for k = 1:cfg.nsubject
     input{k} = simulate_data_lmm('noise',cfg.noise,...
         'srate',cfg.srate,'datasamples',cfg.datalength*cfg.srate,...
-        'basis','dirac');
+        'basis',cfg.basisshape);
 end
 
 

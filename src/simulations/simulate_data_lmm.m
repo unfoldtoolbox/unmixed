@@ -22,7 +22,7 @@ switch simCFG.basis
     case 'box'
         sig.shape= ones(1,length(sig.time));
     case 'hanning'
-        sig.shape = hanning(length(sig.time)); %P3
+        sig.shape = hanning(length(sig.time))'; %P3
     case 'dirac'
         sig.shape = [0 1 zeros(1,length(sig.time)-2)];
     case 'posneg'

@@ -52,14 +52,7 @@ if 1 == 0
         covtable{k} = [tbl(idxk,:)];
         covmat{k}= triu(ones(ceil(sqrt(length(idxk)))));
         covmat{k}(covmat{k}==1) = tbl.Estimate(idxk);
-        % (3) Add a title for covtable{k}.
-        %ttl = ['Group: ',model.GroupingInfo.GNames{k},...
-        %    ', Covariance Type: ',model.slme.Psi.Matrices{k}.Type];
-        % <entry key="Title_covtable">Covariance Type: {0}</entry>
-        %     ttl = getString(message('stats:LinearMixedModel:Title_covtable',model.slme.Psi.Matrices{k}.Type));
-        %     covtable{k} = classreg.regr.lmeutils.titleddataset(covtable{k},ttl);
-        
-        % (4) Update offset to go to the next grouping variable.
+ 
         offset = endk;
     end
     colorbar
