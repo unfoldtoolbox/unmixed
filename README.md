@@ -12,6 +12,7 @@ Minimal Example:
 rng(1)
 input = [];
 for k = 1:30
+    % you can also add item effects by a flag in simulate_data_lmm. The betas / thetas are currently hardcoded because I'm lazy
     input{k} = simulate_data_lmm('noise',10,...
         'srate',50,'datasamples',600*50,...
         'basis','dirac');
