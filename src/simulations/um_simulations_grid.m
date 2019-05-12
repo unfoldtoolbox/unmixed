@@ -89,6 +89,10 @@ if 1 == 0
  
     
 end
+if nargin<7
+    warning('Using default values')
+    varargin = {[-0.1,1.2],20,10,60,25,'bobyqa','Diagonal'};
+end
 cfg = [];
 cfg.timelimits = varargin{1};%[-0.1,1.2];
 cfg.noise = varargin{2};%varargin{1};%20;
@@ -119,5 +123,5 @@ result.sizeZdc = size(EEG.unmixed.uf_ranef{1}.Zdc);
 tic
 result.model = um_mmfit(EEG,input,'channel',1,'optimizer',cfg.optimizer);
 result.timing = toc;
-
-save(fullfile('cache',DataHash(cfg)),'result')
+toc
+% save(fullfile('cache',DataHash(cfg)),'result')

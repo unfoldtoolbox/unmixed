@@ -6,7 +6,7 @@ function [EEG] = um_designmat(input,varargin)
 
 %%
 cfg.formula = regexprep(cfg.formula,'[\s]','');
-ranefRegexp = '\+\(([a-zA-z\(\)0-9\,+]+)\|([a-zA-Z]+)\)';
+ranefRegexp = '\+\(([-\*a-zA-z\(\)0-9\,+]+)\|([a-zA-Z]+)\)';
 
 
 cfg.formulaRanef= regexp(cfg.formula,ranefRegexp,'tokens');
@@ -19,7 +19,7 @@ tmp = regexp(cfg.formula,ranefRegexp,'split');
 cfg.formulaFixef = sprintf("%s",tmp{:});
 
 % Make sure a grouping variable is not used as an effect
-assert(any(cellfun(@(x)any(strfind(cfg.formulaFixef,x{2})),cfg.formulaRanef))==0,'Please dont add grouping variables also as fixed effects')
+ assert(any(cellfun(@(x)any(strfind(cfg.formulaFixef,x{2})),cfg.formulaRanef))==0,'Please dont add grouping variables also as fixed effects')
 
 %% Load Data info
 
@@ -74,11 +74,15 @@ fprintf('um_designmat: Modeling Random Effects Part\n')
 % but there can be many ranef effect parts
 for k = 1:length(cfg.formulaRanef)
     fprintf('um_designmat: Grouping Variable: %s\n',cfg.formulaRanef{k}{2})
+    % We are adding the grouping variable so we know which data belongs to
+    % which subject after Xdc
     formula = [char(cfg.formulaRanef{k}{1}) '+' cfg.formulaRanef{k}{2}];
     EEG_ranef =uf_designmat(EEG,'formula',formula,ufdesignmatCFG{:});
     EEG_ranef.unfold.ranefgrouping = cfg.formulaRanef{k}{2};
+    
     EEG.unmixed.uf_ranef{k} = EEG_ranef.unfold;
     EEG.unmixed.datapoints_readin = cellfun(@(x)x.pnts,input); % I might not need this one
+    
 end
 
 clear EEG_ranef

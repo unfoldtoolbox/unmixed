@@ -1,4 +1,5 @@
 function test_um_timeexpandDesignmat()
+
 input = test_um_generateTestData('randomItem',1); % add a randomeffect
 %%
 EEG_um = um_designmat(input,'eventtypes','sim','formula','y~1+b+(b|subject)+(1|trialnum)');

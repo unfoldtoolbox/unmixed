@@ -29,7 +29,7 @@ X = EEG.unmixed.uf_fixef.Xdc;
 Y = double(cat(2,data{:})');
 tmp = cellfun(@(x)x.Zdc,EEG.unmixed.uf_ranef,'UniformOutput',0);
 Z = cat(2,tmp{:});
-
+GPU = 1;
 
 %% Generate Covariance Matrices
 fprintf('um_mmfit: initializing random effect covariance matrix structures\n')
@@ -43,8 +43,10 @@ factorsXPerGroup= cellfun(@(x)size(x.X,2)-1,EEG.unmixed.uf_ranef);% minus one be
 
 Glevels = [];
 timeshifts = [];
+groupid = [];
 for g = 1:length(levelsPerGroup)
     Glevels = [Glevels repmat(levelsPerGroup(g),1,nTimeshifts)];
+    groupid = [groupid repmat(g,1,nTimeshifts)]
     timeshifts = [timeshifts 1:nTimeshifts]; % for the label
 end
 
@@ -52,6 +54,7 @@ end
 % now...) that are then combined to a block-covariance structure.
 mat = [];
 for i = 1:length(Glevels)
+    g = groupid(i);
     groupname = EEG.unmixed.uf_ranef{g}.ranefgrouping;
     timeshift = EEG.unmixed.uf_ranef{g}.times(timeshifts(g));
     % each timepoint / group has how many entries?
@@ -75,6 +78,12 @@ tic
 % this ensures that our overwritting rank function is removed even on ctrl+c
 cleanupObj = onCleanup(@cleanMeUp);
 addpath(fullfile('src','um_toolbox','temporaryFunctions','rank'))
+
+% if GPU
+%    X = gpuArray(X);
+%    Y = gpuArray(Y);
+%    Z = gpuArray(Z);
+% end
 
 switch cfg.optimizer
     case 'quasinewton'

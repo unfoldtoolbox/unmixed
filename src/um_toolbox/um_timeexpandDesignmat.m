@@ -11,7 +11,9 @@ EEGtmp = uf_timeexpandDesignmat(EEGtmp,uftimeexpandCFG{:});
 EEG.unmixed.uf_fixef = EEGtmp.unfold;
 clear EEGtmp;
 
+% Now do the timexpansion of ranefs
 for k = 1:length(EEG.unmixed.uf_ranef)
+    % for each grouping
     
     EEGtmp = EEG;
     EEGtmp.unfold = EEGtmp.unmixed.uf_ranef{k};
@@ -19,10 +21,10 @@ for k = 1:length(EEG.unmixed.uf_ranef)
     
     groupingvar = EEGtmp.unfold.ranefgrouping;
     nTimeshifts = length(EEGtmp.unfold.times);
-    [un,ia,ic]= unique([EEGtmp.event.(groupingvar)]);
+    [un,~,~]= unique([EEGtmp.event.(groupingvar)]);
     nGroupingLevels =length(un);
     
-    
+    % Could be replaced with variabletypes == 'ranefgrouping'
     groupingvarCol = EEGtmp.unfold.Xdc_terms2cols == find(ismember(EEGtmp.unfold.variablenames,groupingvar));
 
     groupXdc= EEGtmp.unfold.Xdc(:,groupingvarCol);
@@ -31,11 +33,17 @@ for k = 1:length(EEG.unmixed.uf_ranef)
     
     splitZdc = {};
     Zdc_terms2cols = [];Zdc_level2cols = [];
-    for col = unique(groupXdc(groupXdc(:)~=0))'
-
+    
+    % this trick (to subtract the smallest entry) is needed as we currently
+    % take the subject as a normal effect (to remember which row has which element). Given
+    % effect coding, it m
+    ranefIDs = unique(groupXdc(groupXdc(:)~=0));
+    
+    for cIdx= 1:length(ranefIDs)
+        col = ranefIDs(cIdx);
         
-        splitZdc{col} = spalloc(sz(1),sz(2),1);
-        splitZdc{col}(any(groupXdc==col,2),:) = EEGtmp.unfold.Xdc(any(groupXdc==col,2),~groupingvarCol);
+        splitZdc{cIdx} = spalloc(sz(1),sz(2),1);
+        splitZdc{cIdx}(any(groupXdc==col,2),:) = EEGtmp.unfold.Xdc(any(groupXdc==col,2),~groupingvarCol);
         Zdc_terms2cols = [Zdc_terms2cols EEGtmp.unfold.Xdc_terms2cols(~groupingvarCol)];
         Zdc_level2cols =  [Zdc_level2cols repmat(col,1,sum(~groupingvarCol))];
     end
@@ -62,12 +70,6 @@ for k = 1:length(EEG.unmixed.uf_ranef)
     
     P = permute(P,[2 3 1]);
     
-    
-    % P2 = 1:size(P,2);
-    % P2 = reshape(P2,[],nSubjects);
-    % P2 = P2';
-    % P = P(:,P2);
-    % P = P';
     Zdc= Zdc(:,P(:));
     
     EEGtmp.unfold.Zdc_terms2cols = Zdc_terms2cols(P(:));

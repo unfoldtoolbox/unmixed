@@ -1,4 +1,4 @@
-function input = test_um_generateTestData(varargin)
+function [input,cfgSim] = test_um_generateTestData(varargin)
 cfgSim = [];
 cfgSim.subject = 10;
 cfgSim.srate = 10;
