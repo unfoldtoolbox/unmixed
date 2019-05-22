@@ -1,9 +1,12 @@
 function [EEG] = um_designmat(input,varargin)
-[cfg ufdesignmatCFG] = finputcheck(varargin,...
+[cfg, ufdesignmatCFG] = finputcheck(varargin,...
     {'formula','string',[],[];...
     'inputGroupingName','string',[],'subject';...
     },'mode','ignore');
 
+if ischar(cfg)
+error(cfg)
+end
 %%
 cfg.formula = regexprep(cfg.formula,'[\s]','');
 ranefRegexp = '\+\(([-\*a-zA-z\(\)0-9\,+]+)\|([a-zA-Z]+)\)';
@@ -74,8 +77,6 @@ fprintf('um_designmat: Modeling Random Effects Part\n')
 % but there can be many ranef effect parts
 for k = 1:length(cfg.formulaRanef)
     fprintf('um_designmat: Grouping Variable: %s\n',cfg.formulaRanef{k}{2})
-    % We are adding the grouping variable so we know which data belongs to
-    % which subject after Xdc
     formula = [char(cfg.formulaRanef{k}{1}) '+' cfg.formulaRanef{k}{2}];
     EEG_ranef =uf_designmat(EEG,'formula',formula,ufdesignmatCFG{:});
     EEG_ranef.unfold.ranefgrouping = cfg.formulaRanef{k}{2};

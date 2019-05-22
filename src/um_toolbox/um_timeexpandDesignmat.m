@@ -33,10 +33,8 @@ for k = 1:length(EEG.unmixed.uf_ranef)
     
     splitZdc = {};
     Zdc_terms2cols = [];Zdc_level2cols = [];
+
     
-    % this trick (to subtract the smallest entry) is needed as we currently
-    % take the subject as a normal effect (to remember which row has which element). Given
-    % effect coding, it m
     ranefIDs = unique(groupXdc(groupXdc(:)~=0));
     
     for cIdx= 1:length(ranefIDs)

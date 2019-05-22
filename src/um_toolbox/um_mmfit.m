@@ -1,8 +1,9 @@
-function [model] = um_mmfit(EEG,input,varargin)
+function [EEG] = um_mmfit(EEG,input,varargin)
 % Mixed model fit
 [cfg] = finputcheck(varargin,...
     {'channel','integer',[],[];...
     'fitMethod','string',{'ML','REML'},'ML';...
+    'initstats','boolean',[],1;... %in case only betas are necessary, do not do initstats.
     'optimizer','string',{'fminunc','quasinewton','fminsearch','bobyqa'},'quasinewton';...
     'covariance','string',{'Diagonal','Full','FullCholesky','CompSymm'},'FullCholesky'; ...
     },'mode','ignore');
@@ -12,18 +13,23 @@ end
 
 
 if isstruct(input{1})
-    % nothing to do here
+    
+    % select channel
+    %     for k = 1:length(input)
+    %         input{k}= pop_select(input{k},'channel',cfg.channel);
+    %     end
+    data = cellfun(@(x)squeeze(x.data(cfg.channel,:,:)),input,'UniformOutput',0);
     
 elseif ischar(input)
     % read input files
     for k = 1:length(input)
-        tmp = pop_loadset('filename',input{k},'loadmode',cfg.channel);
+        input{k} = pop_loadset('filename',input{k},'loadmode',cfg.channel);
     end
-    
+    data = cellfun(@(x)x.data,input,'UniformOutput',0);
 end
 
 %% Prepare Data
-data = cellfun(@(x)x.data,input,'UniformOutput',0);
+
 
 X = EEG.unmixed.uf_fixef.Xdc;
 Y = double(cat(2,data{:})');
@@ -46,7 +52,7 @@ timeshifts = [];
 groupid = [];
 for g = 1:length(levelsPerGroup)
     Glevels = [Glevels repmat(levelsPerGroup(g),1,nTimeshifts)];
-    groupid = [groupid repmat(g,1,nTimeshifts)]
+    groupid = [groupid repmat(g,1,nTimeshifts)];
     timeshifts = [timeshifts 1:nTimeshifts]; % for the label
 end
 
@@ -88,22 +94,33 @@ addpath(fullfile('src','um_toolbox','temporaryFunctions','rank'))
 switch cfg.optimizer
     case 'quasinewton'
         model = classreg.regr.lmeutils.StandardLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
-            cfg.fitMethod,true,dostats,'Optimizer','quasinewton','OptimizerOptions',struct('Display','Iter','MaxFunctionEvaluations',40000));
+            cfg.fitMethod,true,dostats,'Optimizer','quasinewton','OptimizerOptions',struct('Display','Iter','MaxFunctionEvaluations',40000),'CheckHessian',1);
     case 'fminunc'
         model = classreg.regr.lmeutils.StandardLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
-            cfg.fitMethod,true,dostats,'Optimizer','fminunc','OptimizerOptions',optimoptions('fminunc','Display','Iter','MaxFunctionEvaluations',40000));
-    case {'bobyqa','fminsearch'}
-        if strcmp(cfg.optimizer,'bobyqa')
-            % we activate the bobyq optimizer by overwriting the fminsearch
-            % function
-            addpath(fullfile('src','um_toolbox','temporaryFunctions','bobyqa'))
-        end
+            cfg.fitMethod,true,dostats,'Optimizer','fminunc','OptimizerOptions',optimoptions('fminunc','Display','Iter','MaxFunctionEvaluations',40000),'CheckHessian',1);
+    case 'bobyqa'
+        % the bobyqa solver, the option "fminsearch" is just to fool the
+        % matlab internal mixed model functions. Bobyqa is hardcoded in
+        % um_customlinearmixedmodel (the name is not
+        % um_CustomBobyqaMixedModel because I want to try other optimizers
+        % too)
+        model = um_CustomLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
+            cfg.fitMethod,true,dostats,'Optimizer','fminsearch','OptimizerOptions',struct('MaxFunEvals',40000),'CheckHessian',1);
+    case 'fminsearch'
         model = classreg.regr.lmeutils.StandardLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
-            cfg.fitMethod,true,dostats,'Optimizer','fminsearch','OptimizerOptions',struct('MaxFunEvals',40000));
-        
+            cfg.fitMethod,true,dostats,'Optimizer','fminsearch','OptimizerOptions',struct('MaxFunEvals',40000),'CheckHessian',1);
 end
 rmpath(genpath(fullfile('src','um_toolbox','temporaryFunctions')))
 toc
+
+
+
+if cfg.initstats
+    fprintf('Calculating SE and the likes, this step takes quite some time ... ')
+    model = model.initstats;
+    fprintf(' done\n')
+end
+EEG.unmixed.modelfit = model;
 end
 
 function cleanMeUp()

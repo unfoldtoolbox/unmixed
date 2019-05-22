@@ -3,6 +3,7 @@ function [EEG] = simulate_data_lmm_v2(varargin)
 simCFG= finputcheck(varargin,...
     {'n_events','integer',[],100; 
     'epochlength','real',[],0.5; %in s
+    'simulationtype','string',{'realistic','ideal'},'realistic'; %realistic uses SEREEGA, ideal generates a single channel respons
     
     'noise_components','real',[],10; % number of random noise components with brown noise
     'noise','real',[],1; % strength of noise
@@ -23,20 +24,31 @@ simCFG= finputcheck(varargin,...
     'u_n1_item','real',[],[4];
     'n_items','real',[],10;... % how many different items per factor 
     'overlaptype','string',{'uniform','lognormal'},'lognormal'; % overlap between events
-    },'mode','ignore');
+    },'mode','error');
 
 assert(~ischar(simCFG),simCFG)
 
 
 
 
-%% Generate Stimulus Timings
+%%  Generate data
+
+switch simCFG.simulationtype
+    case 'realistic'
+        sereega_data = um_sereega_epochs('n_epochs',simCFG.n_events,...
+            'noise_components',simCFG.noise_components,...
+            'srate',simCFG.srate,'noise_orient',1,'epochlength',simCFG.epochlength);
+    case 'ideal'
+        sig.time = simCFG.srate * simCFG.epochlength;
+        % warning currently p1 p3 and n1 all occur at the same time
+        sereega_data.p1.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
+        sereega_data.p3.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
+        sereega_data.n1.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
+        sereega_data.random.data(1,:,:) = randn(size(sereega_data.n1.data));
+end
+%%Generate Stimulus Timings
 % How much time should the continuous EEG have
 %   ~ 1 stim / s
-sereega_data = um_sereega_epochs('n_epochs',simCFG.n_events,...
-    'noise_components',simCFG.noise_components,...
-    'srate',simCFG.srate,'noise_orient',1,'epochlength',simCFG.epochlength);
-%%
 whatTimeForEvents =simCFG.srate*simCFG.epochlength*simCFG.n_events*0.8;
 howManyEvents = simCFG.n_events;
 
@@ -153,10 +165,12 @@ for fn = fieldnames(sereega_data)'
     end
 end
 %%
-simCFG.noise = 0.01;
+% simCFG.noise = 0.01;
 EEG.data = EEG.data + simCFG.noise*sereega_data.random.data(:,1:size(EEG.data,2));
 
-EEG.chanlocs = sereega_data.p1.chanlocs;
+if isfield(sereega_data.p1,'chanlocs')
+    EEG.chanlocs = sereega_data.p1.chanlocs;
+end
 EEG = eeg_checkset(EEG,'eventconsistency');
 
 if 1 == 0
