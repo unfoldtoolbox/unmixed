@@ -32,8 +32,8 @@ umresult.times = EEG.unmixed.uf_fixef.times;
 
 
 if cfg.pvaluesRandom
-%     fprintf('Calculating Random Effects DF with Satterhwaite approximation')
-%     raneflist = randomEffects(model_fv,0.05,'satterthwaite');
+    %     fprintf('Calculating Random Effects DF with Satterhwaite approximation')
+    %     raneflist = randomEffects(model_fv,0.05,'satterthwaite');
     error('check if this is equal order to the one below')
     % also compare to
     raneflist = covarianceParameters(model,0.05,1); % consists of variances, covariances & last entry is error
@@ -72,38 +72,47 @@ for groupIdx = 1:length(groupingFactors)
         
         % (2) k the element of covtable.
         %     covtable{rIdx} = [raneflist(idxk,:)];
+        
         triangleMatrix = triu(ones(ceil(sqrt(length(idxk)))));
-        
+
         %init cov
-        covmat= triangleMatrix;
-        %fill the estimates
-        covmat(triangleMatrix==1) = raneflist.Estimate(idxk);
-        % fill the estimates, lower triangle
-        covmat(triangleMatrix'==1) = raneflist.Estimate(idxk);
-        if any(isnan(covmat(:)))
-            warning('Nans found in ',model.Psi.Matrices{rIdx}.Name, 'model mightnot be converged')
-            ranef.corrmat(timeIdx,:,:) = nan(size(covmat));
+        if strcmp(model.Psi.Matrices{rIdx}.Type,'Diagonal')
+            covmat = eye(size(triangleMatrix));
+            covmat(covmat==1) = raneflist.Estimate(idxk);
+            ranef.corrmat(timeIdx,:,:) = eye(size(covmat));
         else
-            try
-                ranef.corrmat(timeIdx,:,:) = corrcov(covmat);
-            catch
-                warning('Covariance Matrix is not positive semidefinite, model might not be converged')
+            covmat= triangleMatrix;
+            %fill the estimates
+            covmat(triangleMatrix==1) = raneflist.Estimate(idxk);
+            % fill the estimates, lower triangle
+            covmat(triangleMatrix'==1) = raneflist.Estimate(idxk);
+            
+            if any(isnan(covmat(:)))
+                warning('Nans found in ',model.Psi.Matrices{rIdx}.Name, 'model mightnot be converged')
                 ranef.corrmat(timeIdx,:,:) = nan(size(covmat));
-            end
-        end
+            else
+                try
+                    ranef.corrmat(timeIdx,:,:) = corrcov(covmat);
+                catch
+                    warning('Covariance Matrix is not positive semidefinite, model might not be converged')
+                    ranef.corrmat(timeIdx,:,:) = nan(size(covmat));
+                end
+            end    
+            
         
+            
+        end
         ranef.covmat(timeIdx,:,:)  = covmat;
         counterIdx = endk;
         timeIdx = timeIdx + 1;
+        ranef.groupingvariableLevels=  model.Psi.NumReps(rIdx);
+        ranef.variableNames = model.Psi.Matrices{rIdx}.VariableNames;
+        
+        ranef.type = model.Psi.Matrices{rIdx}.Type;
+        ranef.name = groupingFactors{groupIdx};
+        
+        umresult.ranef(groupIdx) = ranef;
     end
-    ranef.groupingvariableLevels=  model.Psi.NumReps(rIdx);
-    ranef.variableNames = model.Psi.Matrices{rIdx}.VariableNames;
+    umresult.logLikelihood = EEG.unmixed.modelfit.loglikHat;
     
-    ranef.type = model.Psi.Matrices{rIdx}.Type;
-    ranef.name = groupingFactors{groupIdx};
-    
-    umresult.ranef(groupIdx) = ranef;
-end
-umresult.logLikelihood = EEG.unmixed.modelfit.loglikHat;
-
 end
