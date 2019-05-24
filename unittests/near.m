@@ -56,7 +56,7 @@ function result = near(arg1, arg2, recursionlevel,tc_epsilon)
         recursionlevel = 5; % for structures
     end;
     if nargin <4
-        tc_epsilon=0.0001
+        tc_epsilon=0.0001;
     end
     if recursionlevel < 1
         return;

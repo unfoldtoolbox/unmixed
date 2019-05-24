@@ -45,9 +45,9 @@ end
 % the names are build like this "g:NAME-t:0.01", looking for the dash to
 % split
 
-nameSplit = cellfun(@(x)strsplit(x.Name,'-'),model.Psi.Matrices,'UniformOutput',0);
+nameSplit = cellfun(@(x)strsplit(x.Name,'-t:'),model.Psi.Matrices,'UniformOutput',0);
 nameSplit = vertcat(nameSplit{:});
-randomtimes = cellfun(@(x)str2num(x(3:end)),nameSplit(:,2));
+randomtimes = cellfun(@(x)str2num(x),nameSplit(:,2));
 randomgroups = cellfun(@(x)x(3:end),nameSplit(:,1),'UniformOutput',0);
 
 groupingFactors = unique(randomgroups,'stable');
