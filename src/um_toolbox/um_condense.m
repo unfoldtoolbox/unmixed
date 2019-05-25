@@ -19,12 +19,12 @@ end
 nEffects = length(EEG.unmixed.uf_fixef.colnames);
 nTimes = length(EEG.unmixed.uf_fixef.times);
 
-fixefmatrix= reshape(table2array(fixef),nEffects,nTimes,7);
+fixefmatrix= reshape(table2array(fixef),nTimes,nEffects,7);
 umresult.fixef = table();
 umresult.fixef.names = EEG.unmixed.uf_fixef.colnames';
 for n = 1:length(fixef.Properties.VariableNames)
     name = fixef.Properties.VariableNames{n};
-    umresult.fixef.(lower(name))= fixefmatrix(:,:,n);
+    umresult.fixef.(lower(name))= fixefmatrix(:,:,n)';
 end
 umresult.times = EEG.unmixed.uf_fixef.times;
 
