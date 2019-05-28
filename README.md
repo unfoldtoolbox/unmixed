@@ -1,5 +1,5 @@
 # Disclaimer:
-This extension is still being developed and strongly optimized for speed. **Use at your own risk!**. Probably best to contact me prior to using it to get to know the quirks :-)
+This extension is still being developed and needs optimization for speed and additional tests. **Use at your own risk!**. Probably best to contact me prior to using it to get to know the quirks :-)
 
 
 # Unfold + Mixed Models = unmixed
