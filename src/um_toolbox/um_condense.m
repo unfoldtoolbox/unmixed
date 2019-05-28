@@ -77,7 +77,7 @@ for groupIdx = 1:length(groupingFactors)
 
         %init cov
         if strcmp(model.Psi.Matrices{rIdx}.Type,'Diagonal')
-            covmat = eye(size(triangleMatrix));
+            covmat = eye(length(idxk));
             covmat(covmat==1) = raneflist.Estimate(idxk);
             ranef.corrmat(timeIdx,:,:) = eye(size(covmat));
         else

@@ -125,5 +125,4 @@ end
 
 function cleanMeUp()
 rmpath(fullfile('src','um_toolbox','temporaryFunctions','rank'))
-rmpath(fullfile('src','um_toolbox','temporaryFunctions','bobyqa'))
 end

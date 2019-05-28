@@ -135,7 +135,7 @@ epochs.length = 1000*cfg.epochlength;
 EEG=[];
 for fn = {'p1','random','p3','n1'}
     eval(sprintf('comp = %s_comp;',fn{1}))
-    data = generate_scalpdata(comp, lf, epochs);
+    data = generate_scalpdata(comp, lf, epochs,'showprogress',0);
     EEG.(fn{1}) = utl_create_eeglabdataset(data, epochs, lf, 'marker', 'event1');
 end
 
