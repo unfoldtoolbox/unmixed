@@ -2,9 +2,9 @@
 
 % Generate synthetic data
 n = 1000; % 1000 observations
-p = 100;  % 100 fixed effects
+p = 5;  % 100 fixed effects
 d = 3;    % 3 random effects
-m = 20;   % observations correspond to 20 groups
+m = 1;   % observations correspond to 20 groups
 alpha = 1;% for generating approximately the same #observations per group
 [X,y,Z,Beta,H,s2] = genCusData(n,p,d,m,alpha);
 

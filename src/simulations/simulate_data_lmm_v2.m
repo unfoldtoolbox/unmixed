@@ -3,10 +3,11 @@ function [EEG] = simulate_data_lmm_v2(varargin)
 simCFG= finputcheck(varargin,...
     {'n_events','integer',[],100; 
     'epochlength','real',[],0.5; %in s
-    'simulationtype','string',{'realistic','ideal'},'realistic'; %realistic uses SEREEGA, ideal generates a single channel respons
+    'simulationtype','string',{'realistic','ideal','ideal_hanning'},'realistic'; %realistic uses SEREEGA, ideal generates a single channel respons
     
     'noise_components','real',[],10; % number of random noise components with brown noise
     'noise','real',[],1; % strength of noise
+    'u_noise','real',[],0.5; %variability of noise level - subjectwise
     
     'b_p1_2x2','real',[],[10,5,-1,3]; % P1: Intercept, MainA, MainB, Inter - effect coded beta
     'u_p1_2x2','real',[],[5,2,2,2]; %   P1: Subject variability
@@ -32,32 +33,38 @@ assert(~ischar(simCFG),simCFG)
 
 
 %%  Generate data
+sig.time = simCFG.srate * simCFG.epochlength;
 
 switch simCFG.simulationtype
     case 'realistic'
-        sereega_data = um_sereega_epochs('n_epochs',simCFG.n_events,...
+        simulated_data = um_sereega_epochs('n_epochs',simCFG.n_events,...
             'noise_components',simCFG.noise_components,...
             'srate',simCFG.srate,'noise_orient',1,'epochlength',simCFG.epochlength);
     case 'ideal'
-        sig.time = simCFG.srate * simCFG.epochlength;
         % warning currently p1 p3 and n1 all occur at the same time
-        sereega_data.p1.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
-        sereega_data.p3.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
-        sereega_data.n1.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
-        sereega_data.random.data(1,:,:) = randn(size(sereega_data.n1.data));
+        simulated_data.p1.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
+        simulated_data.p3.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
+        simulated_data.n1.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
+        simulated_data.random.data(1,:,:) = randn(1,size(simulated_data.n1.data,2),size(simulated_data.n1.data,3)*3);
+    case 'ideal_hanning'
+        % warning currently p1 p3 and n1 all occur at the same time
+        simulated_data.p1.data(1,:,:) = repmat(hanning(sig.time),1,simCFG.n_events);
+        simulated_data.p3.data(1,:,:) = zeros(sig.time,simCFG.n_events);%repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
+        simulated_data.n1.data(1,:,:) = zeros(sig.time,simCFG.n_events);%repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
+        simulated_data.random.data(1,:,:) =  randn(1,size(simulated_data.n1.data,2),size(simulated_data.n1.data,3)*3);
 end
 %%Generate Stimulus Timings
 % How much time should the continuous EEG have
 %   ~ 1 stim / s
-whatTimeForEvents =simCFG.srate*simCFG.epochlength*simCFG.n_events*0.8;
-howManyEvents = simCFG.n_events;
+whatTimeForEvents = simCFG.srate*simCFG.epochlength*simCFG.n_events*2;
+howManyEvents = ceil(simCFG.n_events*1.5);
 
 while true
     
     switch simCFG.overlaptype
         case 'uniform'
             % we should also use the cumsum approach (see below)
-            warning('you might need to adapt whatTimeForEvents, or wait quite long ;-)')
+%             warning('you might need to adapt whatTimeForEvents, or wait quite long ;-)')
             ix = unique(sort(randi(whatTimeForEvents,howManyEvents,1)));
             
         case 'lognormal'
@@ -74,7 +81,8 @@ while true
     ix = round(ix);
     del = diff(ix) <0.1*simCFG.srate; % min overlap should be 100ms
     ix(del) = [];
-    if length(ix) == howManyEvents
+    if length(ix) >= howManyEvents/1.5
+        ix = ix(1:howManyEvents/1.5);
         break
     end
 end
@@ -101,7 +109,7 @@ stimA(X(:,2)==1)  = stimA_1;
 
 EEG = eeg_emptyset();
 EEG.event = struct('type','sim',...
-    'latency',num2cell(ix)',...
+    'latency',num2cell(ix),...
     'trialnum',num2cell(1:length(ix))',...
     'condA',num2cell(X(:,2)/2+0.5),...
     'condB',num2cell(X(:,3)/2+0.5),...
@@ -114,9 +122,9 @@ EEG.trials = 1;
 % EEG=uf_designmat(EEG,'formula','y~1+condA+condB','eventtypes','sim');
 % EEG.pnts =ceil(EEG.event(end).latency + simCFG.epochlength*simCFG.srate); % fix (prospective) timing for last event
 
-EEG.data = zeros(size(sereega_data.p1.data,1),whatTimeForEvents);
+EEG.data = zeros(size(simulated_data.p1.data,1),ceil(max(ix)+1.2*simCFG.srate*simCFG.epochlength));
 % EEG2 = uf_timeexpandDesignmat(EEG,'timelimits',[0,simCFG.epochlength]);
-for fn = fieldnames(sereega_data)'
+for fn = fieldnames(simulated_data)'
     if strcmp(fn{1},'random')
         continue
     end
@@ -137,19 +145,24 @@ for fn = fieldnames(sereega_data)'
         
         old = rng(1); % to get same effect of each stimulus for each subject in consecutive simulation-runs
         item_effect_nitems = randn(simCFG.n_items*2,1)*u_item;
-        warning('same item variability for all 3 peaks')
+%         warning('same item variability for all 3 peaks')
         rng(old);
         item_effect = item_effect_nitems(stimA); % what each item has in addtion
-        X(:,1) = 1 + item_effect/(b(1)+Z(1)); % I simply add this to each intercept
+%         X(:,1) = 1 + item_effect/(b(1)+Z(1)); % I simply add this to each intercept
         
         
     end
     
   
-    simdat_raw = sereega_data.(fn{1}).data;
+    simdat_raw = simulated_data.(fn{1}).data;
     simdat = nan(size(simdat_raw));
     for ch = 1:size(simdat,1)
-    simdat(ch,:,:) =bsxfun(@times,squeeze(simdat_raw(ch,:,:)),(X*(b+Z)')');
+        multWith = (X*(b+Z)')';
+        if simCFG.randomItem
+            multWith = multWith + item_effect';
+        end
+    simdat(ch,:,:) =bsxfun(@times,squeeze(simdat_raw(ch,:,:)),multWith);
+
     end
     
     for k = 1:length(EEG.event)
@@ -160,24 +173,33 @@ for fn = fieldnames(sereega_data)'
     EEG.sim.Z.(fn{1}) = Z;
     EEG.sim.u.(fn{1}) = u;
     EEG.sim.b.(fn{1}) = b;
+    EEG.sim.uCov = D*R*D;
     if simCFG.randomItem
         EEG.sim.item = item_effect;
     end
 end
-%%
+EEG.sim.simCFG = simCFG;
+%% adding noise
 % simCFG.noise = 0.01;
-EEG.data = EEG.data + simCFG.noise*sereega_data.random.data(:,1:size(EEG.data,2));
+% To abs or not to abs: I think it actually does not matter (because sign of noise is arbitrary), but I like it
+% if the noise parameter is positive
+noiselevel = abs(randn(1)*simCFG.u_noise+simCFG.noise);
+noise_norm = simulated_data.random.data(:,1:size(EEG.data,2));
+scale_noise_by = prctile(noise_norm(:),[10,90]);
+noise_norm = noise_norm./diff(scale_noise_by);
+EEG.data = EEG.data + noiselevel*noise_norm;
 
-if isfield(sereega_data.p1,'chanlocs')
-    EEG.chanlocs = sereega_data.p1.chanlocs;
+EEG.sim.noiselevel = noiselevel;
+if isfield(simulated_data.p1,'chanlocs')
+    EEG.chanlocs = simulated_data.p1.chanlocs;
 end
 EEG = eeg_checkset(EEG,'eventconsistency');
 
 if 1 == 0
     %% For Debugging purposes, plot the results
-EEG2=uf_designmat(EEG,'formula','y~1+cat(condA)*cat(condB)','eventtypes','sim','codingschema','effects');
-EEG2 = uf_timeexpandDesignmat(EEG2,'timelimits',[0,simCFG.epochlength]);
-EEG2 = uf_glmfit(EEG2);
-
-uf_plotParam(uf_condense(EEG2),'channel',63)
+    EEG2=uf_designmat(EEG,'formula','y~1+cat(condA)*cat(condB)','eventtypes','sim','codingschema','effects');
+    EEG2 = uf_timeexpandDesignmat(EEG2,'timelimits',[0,simCFG.epochlength]);
+    EEG2 = uf_glmfit(EEG2);
+    
+    uf_plotParam(uf_condense(EEG2),'channel',63)
 end
