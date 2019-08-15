@@ -12,23 +12,41 @@ EEG.unmixed.uf_fixef = EEGtmp.unfold;
 clear EEGtmp;
 
 % Now do the timexpansion of ranefs
+% for each groupingvariable
 for k = 1:length(EEG.unmixed.uf_ranef)
-    % for each grouping
     
+    % generate a "fake" unfold structure
     EEGtmp = EEG;
-    EEGtmp.unfold = EEGtmp.unmixed.uf_ranef{k};
+    EEGtmp.unfold = EEG.unmixed.uf_ranef{k};
+    
+    % Time expand it
     EEGtmp = uf_timeexpandDesignmat(EEGtmp,uftimeexpandCFG{:});
     
-    groupingvar = EEGtmp.unfold.ranefgrouping;
+    % Now we need to recover the grouping variable
+%     groupingvar = EEGtmp.unfold.ranefgrouping;
+    groupingid = EEGtmp.unfold.variabletypes == "ranefgrouping";
+    groupingvar = EEGtmp.unfold.variablenames{groupingid};
     nTimeshifts = length(EEGtmp.unfold.times);
-    [un,~,~]= unique([EEGtmp.event.(groupingvar)]);
-    nGroupingLevels =length(un);
     
-    % Could be replaced with variabletypes == 'ranefgrouping'
-    groupingvarCol = EEGtmp.unfold.Xdc_terms2cols == find(ismember(EEGtmp.unfold.variablenames,groupingvar));
+    % differentiate between spline effect and random effect
+    if length(EEGtmp.unfold.cols2variablenames==find(groupingid)) == 1
+        % random effects case
+        [un,~,~]= unique([EEGtmp.event.(groupingvar)]);
+        nGroupingLevels =length(un);
 
+    else
+        % spline case
+        error('to be implemented')
+    end
+    
+    
+    % find out which columns are from the grouping variable
+    groupingvarCol = EEGtmp.unfold.Xdc_terms2cols == find(EEGtmp.unfold.variabletypes=="ranefgrouping");
+
+    % extractthem
     groupXdc= EEGtmp.unfold.Xdc(:,groupingvarCol);
     
+    % how many remaining columns are there?
     sz = size(EEGtmp.unfold.Xdc(:,~groupingvarCol));
     
     splitZdc = {};
