@@ -1,6 +1,6 @@
 function [EEG] = simulate_data_lmm_v2(varargin)
 
-simCFG= finputcheck(varargin,...
+[simCFG residual_varargin]= finputcheck(varargin,...
     {'n_events','integer',[],100; 
     'epochlength','real',[],0.5; %in s
     'simulationtype','string',{'realistic','ideal','ideal_hanning'},'realistic'; %realistic uses SEREEGA, ideal generates a single channel respons
@@ -29,8 +29,12 @@ simCFG= finputcheck(varargin,...
                                                            %['interceptMin,interceptMax] ...
     'overlapminimum','real',[],0.1; %whats the shortest time two stimuli can follow eachother? This will be adjusted AFTER taking the previous parameters into acount, thus biasing them!
     
-    },'mode','error');
+    },'mode','ignore');
 
+if ~isempty(residual_varargin)
+    fprintf('Additional CFG entries found')
+    warning(sprintf('%s\t',residual_varargin{1:2:end}))
+end
 assert(~ischar(simCFG),simCFG)
 
 

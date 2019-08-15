@@ -1,19 +1,36 @@
 function um_simulations_grid(varargin)
+[cfg,residual_varargin] = finputcheck(varargin,...
+    {'timelimits','real',[],[-.2 1.2]
+    'noise','real',[],20
+    'u_noise','real',[],20
+    'srate','real',[],50
+    'n_events','real',[],10
+    'n_subjects','real',[],50
+    'u_p1_item', 'real',[], [0]
+    'optimizer','string',[],'bobyqa'
+    'covariance','string',[],'diagonal'
+    },'mode','ignore');
+
+
+
 if 1 == 0
     %% donders specific Grid start
    addpath('/home/common/matlab/fieldtrip/qsub')
    cfg =[];
    cfg.timelimits = {[-.2 1.2],[-.1 2]};
    cfg.noise = {20 1 40};
-   cfg.srate = {100 50 150 250};
-   cfg.datalength = {600,60,300}; %in s
-   cfg.nsubject = {20 30 50 70};
-   %optimizer = {'fminunc','quasinewton','fminsearch'};
-   optimizer = {'bobyqa'};
-   cfg.covariance = {'fullCholesky','full','diagonal'};
-   for optim= optimizer
+   cfg.u_noise = {20 1};
+   cfg.srate = {50 250};
+   cfg.n_events = {10,300}; %in s
+   cfg.n_subjects = {50 20 90};
+   cfg.u_p1_item = {[0 10]};
+   cfg.optimizer = {'bobyqa','quasinewton'};
+   cfg.covariance = {'diagonal','fullCholesky'};
+   for optim= cfg.optimizer
        for fn = fieldnames(cfg)'
-           
+           if fn == "optimizer"
+               continue
+           end
            % in order to not check out the complete grid of all
            % combinations, we set a default and vary the parameter in one
            % dimension only
@@ -27,7 +44,9 @@ if 1 == 0
            for k = 1:length(cfg.(fn{1}))
                eval(sprintf('%s = cfg.%s{%i};',fn{1},fn{1},k))
                
-               qsubfeval(@um_simulations_grid,timelimits,noise,srate,datalength,nsubject,optim{1},covariance,'memreq',2*1024^3,'timreq',60*20*60)
+%                qsubfeval(@um_simulations_grid,'timelimits',timelimits,'noise',noise,...
+%                    'u_noise',u_noise,'srate',srate,'n_events',n_events,'n_subjects',n_subjects,...
+%                    'optimizer',optim{1},'covariance',covariance,'u_p1_item',u_p1_item,'memreq',2*1024^3,'timreq',60*20*60)
            end
        end
    end
@@ -89,30 +108,29 @@ if 1 == 0
  
     
 end
-if nargin<7
-    warning('Using default values')
-    varargin = {[-0.1,1.2],20,10,60,25,'bobyqa','Diagonal'};
-end
-cfg = [];
-cfg.timelimits = varargin{1};%[-0.1,1.2];
-cfg.noise = varargin{2};%varargin{1};%20;
-cfg.srate= varargin{3};%10;
-cfg.datalength = varargin{4};%60;
-cfg.nsubject = varargin{5};%25;
-cfg.optimizer = varargin{6};%'fminunc';%
-cfg.covariance = varargin{7}; %FullCholesky,'Diagonal'
-cfg.basisshape = 'hanning';
+
+
 
 rng(1)
 input = [];
-for k = 1:cfg.nsubject
-    input{k} = simulate_data_lmm_v2('noise',cfg.noise,...
-        'srate',cfg.srate,'datasamples',cfg.datalength*cfg.srate,...
-        'basis',cfg.basisshape);
+for k = 1:cfg.n_subjects
+    cfg.randomItem = 1;
+    cfg.simulationtype  = 'ideal_hanning';
+    cfg.overlaptype = 'lognormal';
+    cfg.b_p1_2x2=[5,5,0,0];
+    cfg.u_p1_2x2=[10 1 0 0];
+    cfg.b_p3_2x2=[0,0,0,0];
+    cfg.u_p3_2x2=[0,0,0,0];
+    cfg.b_n1_2x2=[0,0,0,0];
+    cfg.u_n1_2x2=[0,0,0,0];
+    cfg.u_p3_item=[0];
+    cfg.u_n1_item=[0];
+    cfg.noise_components = 5; % unused if ideal_hanning is used
+    input{k} = simulate_data_lmm_v2(cfg);
 end
 
 
-EEG = um_designmat(input,'eventtypes','sim','formula','y~1+b+(1+b|subject)');
+EEG = um_designmat(input,'eventtypes','sim','formula','y~1+condA+condB+(1+condA|subject)');
 EEG= um_timeexpandDesignmat(EEG,'timelimits',cfg.timelimits);
 
 
@@ -124,4 +142,4 @@ tic
 result.model = um_mmfit(EEG,input,'channel',1,'optimizer',cfg.optimizer);
 result.timing = toc;
 toc
-% save(fullfile('cache',DataHash(cfg)),'result')
+save(fullfile('cache',DataHash(cfg)),'result','cfg')
