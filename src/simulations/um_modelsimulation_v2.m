@@ -5,7 +5,7 @@ datalength=600;
 nsubject=40;
 optim = 'bobyqa';
 
-model = um_simulations_grid(timelimits,noise,srate,datalength,nsubject,optim)
+model = um_simulations_grid(timelimits,noise,srate,datalength,nsubject,optim);
 
 %% Plotting
 
