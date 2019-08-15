@@ -9,7 +9,7 @@ error(cfg)
 end
 %%
 cfg.formula = regexprep(cfg.formula,'[\s]','');
-ranefRegexp = '\+\(([-\*a-zA-z\(\)0-9\,+]+)\|([a-zA-Z]+)\)';
+ranefRegexp = '\+\(([-\*a-zA-z\(\)0-9\,+]+)\|([a-zA-Z\(\)\,0-9]+)\)';
 
 
 cfg.formulaRanef= regexp(cfg.formula,ranefRegexp,'tokens');
@@ -46,10 +46,20 @@ assert(length(unique(cellfun(@(x)x.srate,input))) == 1,'Not all sets have the sa
 
 EEG = eeg_emptyset();
 % collect events
+
 max_prev_latency = 0;
+% Go through each "subject" and assign a unique subject variable
+% Also change the event latencies, so that we can concatenate the designs
 for k = 1:length(input)
     singleEEG =  input{k}.event;
+    % incase the inputGroupingName already exists, give a warning before
+    % overwriting with 1:length().
+    if ~(all(cellfun(@(x)isempty(x),strfind(fieldnames(singleEEG),cfg.inputGroupingName))))
+        warning('overwritting singleEEG.event.%s with k=1:length(input)',cfg.inputGroupingName)
+    end
+    
     for e = 1:length(singleEEG)
+        
         singleEEG(e).(cfg.inputGroupingName) = k;
         singleEEG(e).urlatency = singleEEG(e).latency;
         singleEEG(e).latency = singleEEG(e).latency + max_prev_latency;
@@ -77,12 +87,22 @@ fprintf('um_designmat: Modeling Random Effects Part\n')
 % but there can be many ranef effect parts
 for k = 1:length(cfg.formulaRanef)
     fprintf('um_designmat: Grouping Variable: %s\n',cfg.formulaRanef{k}{2})
-    formula = [char(cfg.formulaRanef{k}{1}) '+' cfg.formulaRanef{k}{2}];
+    % adding the grouping variables to the designmatrix so that we can
+    % timeexpand them later
+    formula = [char(cfg.formulaRanef{k}{1}) '+' [cfg.formulaRanef{k}{2}]];
+%     formula = char(cfg.formulaRanef{k}{1});
+    
     EEG_ranef =uf_designmat(EEG,'formula',formula,ufdesignmatCFG{:});
     EEG_ranef.unfold.ranefgrouping = cfg.formulaRanef{k}{2};
     
+    % change variabletype to ranefgrouping
+    assert(cfg.codingschema =="reference",'For now coding schema has to be reference, else the grouping variable will be messed up')
+    EEG_ranef.unfold.variabletypes{end} = 'ranefgrouping';
+    
+    % Save it
     EEG.unmixed.uf_ranef{k} = EEG_ranef.unfold;
     EEG.unmixed.datapoints_readin = cellfun(@(x)x.pnts,input); % I might not need this one
+    
     
 end
 
