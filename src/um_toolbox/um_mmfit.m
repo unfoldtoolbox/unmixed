@@ -93,8 +93,12 @@ addpath(fullfile('src','um_toolbox','temporaryFunctions','rank'))
 
 switch cfg.optimizer
     case 'quasinewton'
+        optimizeroptions = statset('LinearMixedModel');
+%         optimizeroptions.MaxIter = 10000;
+        optimizeroptions.Display = 'Iter';
+%         optimizeroptions.MaxFunEvals = 40000;
         model = classreg.regr.lmeutils.StandardLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
-            cfg.fitMethod,true,dostats,'Optimizer','quasinewton','OptimizerOptions',struct('Display','Iter','MaxFunctionEvaluations',40000),'CheckHessian',1);
+            cfg.fitMethod,true,dostats,'Optimizer','quasinewton','OptimizerOptions',optimizeroptions,'CheckHessian',1);
     case 'fminunc'
         model = classreg.regr.lmeutils.StandardLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
             cfg.fitMethod,true,dostats,'Optimizer','fminunc','OptimizerOptions',optimoptions('fminunc','Display','Iter','MaxFunctionEvaluations',40000),'CheckHessian',1);
@@ -106,6 +110,7 @@ switch cfg.optimizer
         % too)
         model = um_CustomLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
             cfg.fitMethod,true,dostats,'Optimizer','fminsearch','OptimizerOptions',struct('MaxFunEvals',40000),'CheckHessian',1);
+
     case 'fminsearch'
         model = classreg.regr.lmeutils.StandardLinearMixedModel(X(ix,:),Y(ix),Z(ix,:),Psi,...
             cfg.fitMethod,true,dostats,'Optimizer','fminsearch','OptimizerOptions',struct('MaxFunEvals',40000),'CheckHessian',1);
