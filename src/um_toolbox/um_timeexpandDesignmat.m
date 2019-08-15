@@ -29,7 +29,7 @@ for k = 1:length(EEG.unmixed.uf_ranef)
     nTimeshifts = length(EEGtmp.unfold.times);
     
     % differentiate between spline effect and random effect
-    if length(EEGtmp.unfold.cols2variablenames==find(groupingid)) == 1
+    if sum(EEGtmp.unfold.cols2variablenames==find(groupingid)) == 1
         % random effects case
         [un,~,~]= unique([EEGtmp.event.(groupingvar)]);
         nGroupingLevels =length(un);

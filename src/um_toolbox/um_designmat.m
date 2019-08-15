@@ -96,7 +96,6 @@ for k = 1:length(cfg.formulaRanef)
     EEG_ranef.unfold.ranefgrouping = cfg.formulaRanef{k}{2};
     
     % change variabletype to ranefgrouping
-    assert(cfg.codingschema =="reference",'For now coding schema has to be reference, else the grouping variable will be messed up')
     EEG_ranef.unfold.variabletypes{end} = 'ranefgrouping';
     
     % Save it
