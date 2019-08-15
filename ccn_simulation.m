@@ -36,7 +36,7 @@
 %%
 %     'formula','y~1+cat(condA)*cat(condB)+(1+condA*condB|subject)+(1|stimulus)','codingschema','effects');
 %% Design
-cfgDesign = struct()
+cfgDesign = struct();
 cfgDesign.inputGroupingName='subject';
 cfgDesign.eventtypes= 'sim';
 % cfgDesign.formula= 'y~1+cat(condA)+cat(condB)+(1+cat(condA)+cat(condB)|subject)';
@@ -44,7 +44,7 @@ cfgDesign.eventtypes= 'sim';
 % cfgDesign.formula = 'y~1 + cat(condA)+ (1+cat(condA)|subject)+(1|stimulus)';
 cfgDesign.formula = 'y~1+condA+(1+condA|subject)';
 % cfgDesign.formula = 'y~1+condA+(1+condA|subject)+(1|stimulus)';
-cfgDesign.codingschema = 'effects';
+cfgDesign.codingschema = 'reference';
 
 EEG = um_designmat(input,cfgDesign);
 
@@ -70,7 +70,7 @@ g.draw();
 d2nd = [];
 for subj = 1:length(input)
     EEGsing = uf_designmat(input{subj},'formula',char(EEG.unmixed.formulaFixef),'eventtypes','sim',...
-        'codingschema','effects');
+        'codingschema','reference');
     EEGsing = uf_timeexpandDesignmat(EEGsing,'timelimits',[-.1,.5]);
     EEGsing = uf_glmfit(EEGsing,'channel',1);
     EEGsing = uf_epoch(EEGsing,'timelimits',[-.1,.5]);
@@ -90,7 +90,7 @@ end
 %% Two Stage Plot
 figure
 estimate = squeeze(d2nd.beta(1,:,:,:));
-se = std(estimate,[],3)/sqrt(30);
+se = std(esti2mate,[],3)/sqrt(30);
 m = mean(estimate,3);
 g =gramm('x',d2nd.times','y',m',...
     'color',{ufresult.param.name},...
