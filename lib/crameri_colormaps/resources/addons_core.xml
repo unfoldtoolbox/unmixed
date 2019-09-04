@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<addonCore>
+
+  <label>crameri perceptually uniform scientific colormaps</label>
+
+  <version>1.05</version>
+
+  <type>Toolbox</type>
+
+  <identifier>988c00c0-6131-42e7-8246-e1efbf8825a2</identifier>
+
+  <summary>Perceptually uniform scientific colormaps from Fabio Crameri.</summary>
+
+  <description>When color is a numerical axis, it should not be distorted. 
+
+This function is similar to the cmocean (Thyng et al., 2016) function also found on File Exchange, but this one's for Fabio Crameri's colormaps (Crameri 2018a,b). 
+
+References: 
+Crameri, F. (2018). Scientific colour-maps. Zenodo. http://doi.org/10.5281/zenodo.1243862
+
+Crameri, F. (2018), Geodynamic diagnostics, scientific visualisation and StagLab 3.0, Geosci. Model Dev., 11, 2541-2562, doi:10.5194/gmd-11-2541-2018 .
+
+Thyng, K. M., Greene, C. A., Hetland, R. D., Zimmerle, H. M., &amp; DiMarco, S. F. (2016). True colors of oceanography: Guidelines for effective and accurate colormap selection. Oceanography, 29(3), 9-13. http://dx.doi.org/10.5670/oceanog.2016.66</description>
+
+  <createdBy name="Chad Greene"/>
+
+  <image>resources/screenshot.png</image>
+
+</addonCore>
