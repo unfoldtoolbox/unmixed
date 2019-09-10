@@ -18,11 +18,6 @@ if cfg.debug
 end
 %% noise
 
-noise = struct( ...
-    'type', 'noise', ...
-    'color', 'brown', ...
-    'amplitude', 1);
-noise = utl_check_class(noise);
 % 
 % noise_white = struct( ...
 %     'type', 'noise', ...
@@ -71,6 +66,7 @@ if cfg.debug
 end
 
 p1_comp = utl_get_component_fromtemplate('visual_p100_erp',lf);
+
 if cfg.debug
     p1_comp(1).signal{1}.peakAmplitudeSlope = 0;
     p1_comp(2).signal{1}.peakAmplitudeSlope = 0;
@@ -78,42 +74,42 @@ if cfg.debug
     
 end
 
-p3_comp = [];
+% p3_comp = [];
 
-p3_comp.signal{1} = struct();
-p3_comp.signal{1}.peakLatency = 350;      % in ms, starting at the start of the epoch
-p3_comp.signal{1}.peakWidth = 400;        % in ms
-p3_comp.signal{1}.peakAmplitude = -3;      % in microvolt
-p3_comp.signal{1}.peakLatencyDv = 100; % reaction time?
-p3_comp.signal{1}.peakAmplitudeDv = 3;
-p3_comp.signal{1} = utl_check_class(p3_comp.signal{1}, 'type', 'erp');
-p3_comp.signal{2} = noise;
-
-if cfg.debug
-        plot_signal_fromclass(p3_comp.signal{1}, epochs);
-end
-
-% somewhere deep brain?
-p3_comp.source= lf_get_source_nearest(lf, [0 -40 -25]);
-if cfg.debug
+% p3_comp.signal{1} = struct();
+% p3_comp.signal{1}.peakLatency = 350;      % in ms, starting at the start of the epoch
+% p3_comp.signal{1}.peakWidth = 400;        % in ms
+% p3_comp.signal{1}.peakAmplitude = -3;      % in microvolt
+% p3_comp.signal{1}.peakLatencyDv = 100; % reaction time?
+% p3_comp.signal{1}.peakAmplitudeDv = 3;
+% p3_comp.signal{1} = utl_check_class(p3_comp.signal{1}, 'type', 'erp');
+% p3_comp.signal{2} = noise;
+% 
+% if cfg.debug
+%         plot_signal_fromclass(p3_comp.signal{1}, epochs);
+% end
+% 
+% % somewhere deep brain?
+% p3_comp.source= lf_get_source_nearest(lf, [0 -40 -25]);
+% if cfg.debug
     %%
-    p3_comp.source= lf_get_source_nearest(lf, [0 -40 0]);
-    plot_source_location(p3_comp.source, lf, 'mode', '3d');
-end
-
-p3_comp.orientation = utl_get_orientation_pseudotangential(p3_comp.source,lf);
-p3_comp.orientationDv = [0 0 0];
-
-p3_comp.orientation = [0.03,-0.16,1];
-if cfg.debug
-    %%
-    for k = 1:10
-        p3_comp.orientation = utl_get_orientation_random(1);
-        plot_source_projection(p3_comp.source, lf, 'orientation', p3_comp.orientation,'orientedonly',1);
-        %     title(vis.orientation)
-    end
-end
-
+%     p3_comp.source= lf_get_source_nearest(lf, [0 -40 0]);
+%     plot_source_location(p3_comp.source, lf, 'mode', '3d');
+% end
+% 
+% p3_comp.orientation = utl_get_orientation_pseudotangential(p3_comp.source,lf);
+% p3_comp.orientationDv = [0 0 0];
+% 
+% p3_comp.orientation = [0.03,-0.16,1];
+% if cfg.debug
+%     %%
+%     for k = 1:10
+%         p3_comp.orientation = utl_get_orientation_random(1);
+%         plot_source_projection(p3_comp.source, lf, 'orientation', p3_comp.orientation,'orientedonly',1);
+%         %     title(vis.orientation)
+%     end
+% end
+p3_comp = utl_get_component_fromtemplate('p3a_erp',lf);
 
 if cfg.noise_orient
     n1_comp.orientation = n1_comp.orientation + rand(1,3)*0.1;
@@ -124,6 +120,13 @@ if cfg.noise_orient
 end
 %%
 % noise sources
+noise = struct( ...
+    'type', 'noise', ...
+    'color', 'brown-unif', ...
+    'amplitude', 1);
+noise = utl_check_class(noise);
+
+
 random_sources = lf_get_source_spaced(lf, cfg.noise_components, 25);
 random_comp = utl_create_component(random_sources, noise, lf);
 
