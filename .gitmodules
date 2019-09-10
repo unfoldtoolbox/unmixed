@@ -1,3 +1,9 @@
 [submodule "lib/unfold"]
 	path = lib/unfold
 	url = https://github.com/unfoldtoolbox/unfold
+[submodule "lib/seerega"]
+	path = lib/seerega
+	url = https://github.com/lrkrol/SEREEGA
+[submodule "lib/sereega"]
+	path = lib/sereega
+	url = https://github.com/lrkrol/SEREEGA
