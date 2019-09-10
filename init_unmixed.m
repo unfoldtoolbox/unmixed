@@ -9,4 +9,6 @@ addpath('src/um_toolbox')
 addpath('src')
 addpath('lib/bobyqa')
 addpath('lib/eeglab')
+addpath('local')
+addpath(genpath('lib/sereega/'))
 init_unfold
