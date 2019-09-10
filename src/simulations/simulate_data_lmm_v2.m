@@ -1,7 +1,7 @@
 function [EEG] = simulate_data_lmm_v2(varargin)
 
 [simCFG residual_varargin]= finputcheck(varargin,...
-    {'n_events','integer',[],100; 
+    {'n_events','integer',[],100;
     'epochlength','real',[],0.5; %in s
     'simulationtype','string',{'realistic','ideal','ideal_hanning'},'realistic'; %realistic uses SEREEGA, ideal generates a single channel respons
     
@@ -12,7 +12,7 @@ function [EEG] = simulate_data_lmm_v2(varargin)
     'b_p1_2x2','real',[],[10,5,-1,3]; % P1: Intercept, MainA, MainB, Inter - effect coded beta
     'u_p1_2x2','real',[],[5,2,2,2]; %   P1: Subject variability
     
-    'b_p3_2x2','real',[],[6,3,0,0]; 
+    'b_p3_2x2','real',[],[6,3,0,0];
     'u_p3_2x2','real',[],[3,2,1,1];
     
     'b_n1_2x2','real',[],[-6,0,-2,-2];
@@ -23,10 +23,10 @@ function [EEG] = simulate_data_lmm_v2(varargin)
     'u_p1_item','real',[],[5]; % Item effect strength
     'u_p3_item','real',[],[1];
     'u_n1_item','real',[],[4];
-    'n_items','real',[],10;... % how many different items per factor 
+    'n_items','real',[],10;... % how many different items per factor
     'overlaptype','string',{'uniform','lognormal'},'lognormal'; % overlap between events
     'overlapparam','',[],[[0.35,0.1,0,0];[0.1,0,0,0]]; % Effect Coding with -1 / 1! [interceptmean, diffCondA,diffCondB; interceptSD diffCondA ...] for lognormal
-                                                           %['interceptMin,interceptMax] ...
+    %['interceptMin,interceptMax] ...
     'overlapminimum','real',[],0.1; %whats the shortest time two stimuli can follow eachother? This will be adjusted AFTER taking the previous parameters into acount, thus biasing them!
     
     },'mode','ignore');
@@ -61,41 +61,6 @@ switch simCFG.simulationtype
         simulated_data.n1.data(1,:,:) = zeros(sig.time,simCFG.n_events);%repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
         simulated_data.random.data(1,:,:) =  randn(1,size(simulated_data.n1.data,2),size(simulated_data.n1.data,3)*3);
 end
-%%Generate Stimulus Timings
-% How much time should the continuous EEG have
-%   ~ 1 stim / s
-% whatTimeForEvents = simCFG.srate*simCFG.epochlength*simCFG.n_events*2;
-% howManyEvents = ceil(simCFG.n_events*1.5);
-% 
-% while true
-%     
-%     switch simCFG.overlaptype
-%         case 'uniform'
-%             % we should also use the cumsum approach (see below)
-% %             warning('you might need to adapt whatTimeForEvents, or wait quite long ;-)')
-% %             ix = unique(sort(randi(whatTimeForEvents,howManyEvents,1)));
-%             ix = cumsum(round(simCFG.srate*(simCFG.overlapparam(1) + rand(howManyEvents,1)*simCFG.overlapparam(2))));
-%         case 'lognormal'
-%             
-%             m =  simCFG.overlapparam(1)*simCFG.srate;% on average events should start at ~250ms
-%             v = (simCFG.overlapparam(2)*simCFG.srate)^2; % we want ~100ms jitter, gives nice distributions
-%             % taken from 'lognstat' matlab help:
-%             mu = log((m^2)/sqrt(v+m^2));
-%             sigma = sqrt(log(v/(m^2)+1));
-%             % to visualize:
-%             % figure,hist(lognrnd(mu,sigma,1,1000)/EEG.srate,1000)
-%             ix = cumsum(round(lognrnd(mu,sigma,1,howManyEvents)));
-%     end
-%     ix = round(ix);
-%     del = diff(ix) <simCFG.overlapminimum*simCFG.srate; % min overlap should be 100ms
-%     ix(del) = [];
-%     if length(ix) >= howManyEvents/1.5
-%         ix = ix(1:howManyEvents/1.5);
-%         break
-%     end
-% end
-% ix = ix+3*simCFG.srate*simCFG.epochlength; % add a bit of slack in the beginning :-)
-% assert(length(ix)==length(EEG.event))
 
 %% Generate Designmatrix
 % Subject =  1*rand()   + 0.5*slope_rand() +  2*rand() + 2  *slope_rand()
@@ -112,33 +77,37 @@ adjustedOverlap = X*simCFG.overlapparam';
 ix = nan(1,simCFG.n_events);
 for ev = 1:simCFG.n_events
     ix(ev) = -1; % to keep the while running
-   while ix(ev) < simCFG.overlapminimum*simCFG.srate
+    while ix(ev) < simCFG.overlapminimum*simCFG.srate
         switch simCFG.overlaptype
-        case 'uniform'
-            
-            ix(ev) = round(simCFG.srate*(adjustedOverlap(ev,1) + rand(1)*(adjustedOverlap(ev,2)-adjustedOverlap(ev,1))));
-        case 'lognormal'
-            
-            m =  adjustedOverlap(ev,1)*simCFG.srate;% on average events should start at ~250ms
-            v = (adjustedOverlap(ev,2)*simCFG.srate)^2; % we want ~100ms jitter, gives nice distributions
-            % taken from 'lognstat' matlab help:
-            mu = log((m^2)/sqrt(v+m^2));
-            sigma = sqrt(log(v/(m^2)+1));
-            % to visualize:
-            % figure,hist(lognrnd(mu,sigma,1,1000)/EEG.srate,1000)
-            ix(ev) = cumsum(round(lognrnd(mu,sigma,1,1)));
+            case 'uniform'
+                
+                ix(ev) = round(simCFG.srate*(adjustedOverlap(ev,1) + rand(1)*(adjustedOverlap(ev,2)-adjustedOverlap(ev,1))));
+            case 'lognormal'
+                
+                m =  adjustedOverlap(ev,1)*simCFG.srate;% on average events should start at ~250ms
+                v = (adjustedOverlap(ev,2)*simCFG.srate)^2; % we want ~100ms jitter, gives nice distributions
+                % taken from 'lognstat' matlab help:
+                mu = log((m^2)/sqrt(v+m^2));
+                sigma = sqrt(log(v/(m^2)+1));
+                % to visualize:
+                % figure,hist(lognrnd(mu,sigma,1,1000)/EEG.srate,1000)
+                ix(ev) = cumsum(round(lognrnd(mu,sigma,1,1)));
         end
         
     end
     
-
-
+    
+    
 end
 ix = round(cumsum(ix));
 
 
 stimA_0 = mod(1:sum(X(:,2)==-1),simCFG.n_items)+1;
-stimA_1 = mod(1:sum(X(:,2)==1 ),simCFG.n_items)+1+max(stimA_0);
+max_A0=max(stimA_0);
+if isempty(max_A0)
+    max_A0 = 0;
+end
+stimA_1 = mod(1:sum(X(:,2)==1 ),simCFG.n_items)+1+max_A0;
 stimA_0 = stimA_0(randperm(length(stimA_0)));
 stimA_1 = stimA_1(randperm(length(stimA_1)));
 
@@ -162,7 +131,7 @@ EEG.trials = 1;
 % EEG.pnts =ceil(EEG.event(end).latency + simCFG.epochlength*simCFG.srate); % fix (prospective) timing for last event
 
 EEG.data = zeros(size(simulated_data.p1.data,1),ceil(max(ix)+1.2*simCFG.srate*simCFG.epochlength));
-% EEG2 = uf_timeexpandDesignmat(EEG,'timelimits',[0,simCFG.epochlength]);
+%% Combine Epoched Data with Xdc
 for fn = fieldnames(simulated_data)'
     if strcmp(fn{1},'random')
         continue
@@ -184,15 +153,15 @@ for fn = fieldnames(simulated_data)'
         
         old = rng(1); % to get same effect of each stimulus for each subject in consecutive simulation-runs
         item_effect_nitems = randn(simCFG.n_items*2,1)*u_item;
-%         warning('same item variability for all 3 peaks')
+        %         warning('same item variability for all 3 peaks')
         rng(old);
         item_effect = item_effect_nitems(stimA); % what each item has in addtion
-%         X(:,1) = 1 + item_effect/(b(1)+Z(1)); % I simply add this to each intercept
+        %         X(:,1) = 1 + item_effect/(b(1)+Z(1)); % I simply add this to each intercept
         
         
     end
     
-  
+    
     simdat_raw = simulated_data.(fn{1}).data;
     simdat = nan(size(simdat_raw));
     for ch = 1:size(simdat,1)
@@ -200,13 +169,13 @@ for fn = fieldnames(simulated_data)'
         if simCFG.randomItem
             multWith = multWith + item_effect';
         end
-    simdat(ch,:,:) =bsxfun(@times,squeeze(simdat_raw(ch,:,:)),multWith);
-
+        simdat(ch,:,:) =bsxfun(@times,squeeze(simdat_raw(ch,:,:)),multWith);
+        
     end
     
     for k = 1:length(EEG.event)
         EEG.data(:,ix(k):(ix(k)+simCFG.srate*simCFG.epochlength-1)) = EEG.data(:,ix(k):(ix(k)+simCFG.srate*simCFG.epochlength-1))+simdat(:,:,k);
-    
+        
     end
     EEG.sim.X = X;
     EEG.sim.Z.(fn{1}) = Z;
@@ -223,24 +192,24 @@ EEG.sim.simCFG = simCFG;
 % To abs or not to abs: I think it actually does not matter (because sign of noise is arbitrary), but I like it
 % if the noise parameter is positive
 if simCFG.noise >0
-noiselevel = abs(randn(1)*simCFG.u_noise+simCFG.noise);
-if size(EEG.data,2) > size(simulated_data.random.data(1,:),2)
+    noiselevel = abs(randn(1)*simCFG.u_noise+simCFG.noise);
+    if size(EEG.data,2) > size(simulated_data.random.data(1,:),2)
+        
+        warning('Overlap is not large enough, need to duplicating noise')
+        % in case the "olverapped" EEG is larger than n_events*epochlength, we
+        % do not have enough epochs to span the whole continuous overlapped EEG
+        % and thus need to copy. Times two should be enough for most cases
+        % TODO: Make a principled noise function, or generate more noise
+        % epochs, or regenerate noise epochs?!
+        simulated_data.random.data(:,:,end+1:(end+size(simulated_data.random.data,3))) = simulated_data.random.data(:,:,:);
+    end
+    noise_norm = simulated_data.random.data(:,1:size(EEG.data,2));
+    scale_noise_by = prctile(noise_norm(:),[10,90]);
+    noise_norm = noise_norm./diff(scale_noise_by);
+    EEG.data = EEG.data + noiselevel*noise_norm;
     
-   warning('Overlap is not large enough, need to duplicating noise') 
-   % in case the "olverapped" EEG is larger than n_events*epochlength, we
-   % do not have enough epochs to span the whole continuous overlapped EEG
-   % and thus need to copy. Times two should be enough for most cases
-   % TODO: Make a principled noise function, or generate more noise
-   % epochs, or regenerate noise epochs?!
-   simulated_data.random.data(1,end:size(simulated_data.random.data(1,:),2)) = simulated_data.random.data(:,:);
-end
-noise_norm = simulated_data.random.data(:,1:size(EEG.data,2));
-scale_noise_by = prctile(noise_norm(:),[10,90]);
-noise_norm = noise_norm./diff(scale_noise_by);
-EEG.data = EEG.data + noiselevel*noise_norm;
-
-EEG.sim.noiselevel = noiselevel;
-else 
+    EEG.sim.noiselevel = noiselevel;
+else
     EEG.sim.noiselevel = 0;
 end
 if isfield(simulated_data.p1,'chanlocs')
@@ -254,5 +223,5 @@ if 1 == 0
     EEG2 = uf_timeexpandDesignmat(EEG2,'timelimits',[0,simCFG.epochlength]);
     EEG2 = uf_glmfit(EEG2);
     
-    uf_plotParam(uf_condense(EEG2),'channel',63)
+    uf_plotParam(uf_condense(EEG2),'channel',52)
 end
