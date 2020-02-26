@@ -1,4 +1,4 @@
-function [EEG] = um_designmat(input,varargin)
+function [EEG,EEG_fixef] = um_designmat(input,varargin)
 [cfg, ufdesignmatCFG] = finputcheck(varargin,...
     {'formula','string',[],[];...
     'inputGroupingName','string',[],'subject';...
@@ -80,7 +80,7 @@ fprintf('um_designmat: Modeling Fixed Effect Part \n')
 EEG_fixef =uf_designmat(EEG,'formula',char(cfg.formulaFixef),ufdesignmatCFG{:});
 EEG.unmixed.uf_fixef = EEG_fixef.unfold;
 
-clear EEG_fixef
+% clear EEG_fixef
 
 
 fprintf('um_designmat: Modeling Random Effects Part\n')
@@ -96,8 +96,15 @@ for k = 1:length(cfg.formulaRanef)
     EEG_ranef.unfold.ranefgrouping = cfg.formulaRanef{k}{2};
     
     % change variabletype to ranefgrouping
-    EEG_ranef.unfold.variabletypes{end} = 'ranefgrouping';
+    ix = strcmp(EEG_ranef.unfold.variablenames, cfg.formulaRanef{k}{2});
+    EEG_ranef.unfold.variabletypes{ix} = 'ranefgrouping';
     
+    if EEG_ranef.unfold.codingschema =="effects"
+        % add back the mean
+        ix = EEG_ranef.unfold.cols2variablenames(end);
+        EEG_ranef.unfold.X(:,ix) =EEG_ranef.unfold.X(:,ix)+EEG_ranef.unfold.effects_mean(end);
+        EEG_ranef.unfold.effects_mean(end) = nan;
+    end
     % Save it
     EEG.unmixed.uf_ranef{k} = EEG_ranef.unfold;
     EEG.unmixed.datapoints_readin = cellfun(@(x)x.pnts,input); % I might not need this one
