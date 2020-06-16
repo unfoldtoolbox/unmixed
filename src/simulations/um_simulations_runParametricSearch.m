@@ -34,13 +34,13 @@ elseif cfg.folder == "cache_realistic"
     cfgSim.srate = {50};
     cfgSim.n_events = {50}; %in s
     cfgSim.n_subjects = {50};%{50 10 100};
-    cfgSim.u_p1_item = {0};
+    cfgSim.u_p1_item = {0 10};
     cfgSim.optimizer = {'bobyqa'};
-    cfgSim.covariance = {'diagonal'};
+    cfgSim.covariance = {'diagonal','FullCholesky'};
     cfgSim.simulationtype = {'realistic'};
     cfgSim.overlaptype = {'lognormal'};
     cfgSim.folder = {cfg.folder};
-    cfgSim.formula = {'y~1+condA + (1+condA|subject)','y~1+condA+(1|subject)'};
+    cfgSim.formula = {'y~1+condA + (1+condA|subject)'};
     cfgSim.b_p1_2x2={[10,5/2,0,0]};
     cfgSim.u_p1_2x2={[5,3,0,0],[1,0.5,0,0],[3,1.5,0,0], [10,6,0,0]};
     cfgSim.b_n1_2x2={[0,0,0,0]};
