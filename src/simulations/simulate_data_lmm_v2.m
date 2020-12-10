@@ -20,13 +20,14 @@ function [EEG] = simulate_data_lmm_v2(varargin)
     
     'srate','integer',[],100; % sampling rate
     'randomItem','boolean',[],0; %add an item effect?
+    'randomSubject','boolean',[],1;%add random subject variability
     'u_p1_item','real',[],[5]; % Item effect strength
     'u_p3_item','real',[],[1];
     'u_n1_item','real',[],[4];
     'n_items','real',[],10;... % how many different items per factor
     'overlaptype','string',{'uniform','lognormal'},'lognormal'; % overlap between events
     'overlapparam','',[],[[0.35,0.1,0,0];[0.1,0,0,0]]; % Effect Coding with -1 / 1! [interceptmean, diffCondA,diffCondB; interceptSD diffCondA ...] for lognormal
-    %['interceptMin,interceptMax] ...
+    %for Uniform: ['interceptMin;interceptMax] for lognormal: mean;variance
     'overlapminimum','real',[],0.1; %whats the shortest time two stimuli can follow eachother? This will be adjusted AFTER taking the previous parameters into acount, thus biasing them!
     
     },'mode','ignore');
@@ -43,34 +44,53 @@ assert(~ischar(simCFG),simCFG)
 %%  Generate data
 sig.time = simCFG.srate * simCFG.epochlength;
 
+if isfield(simCFG,'simulated_data')
+    assert(isfield(simCFG.simulated_data,'random'))
+    assert(isfield(simCFG.simulated_data,'p1'))
+    simulated_data = simCFG.simulated_data;
+else
 switch simCFG.simulationtype
     case 'realistic'
         simulated_data = um_sereega_epochs('n_epochs',simCFG.n_events,...
             'noise_components',simCFG.noise_components,...
             'srate',simCFG.srate,'noise_orient',1,'epochlength',simCFG.epochlength);
-    case 'ideal'
-        % warning currently p1 p3 and n1 all occur at the same time
-        simulated_data.p1.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
-        simulated_data.p3.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
-        simulated_data.n1.data(1,:,:) = repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
+    case {'ideal','ideal_hanning'}
+
+        for fn = {'p1','p3','n1'}
+        simulated_data.(fn{1}).data(1,:,:) = zeros(sig.time,simCFG.n_events);
+        switch fn{1}
+            case 'p1'
+                ix = 0.1*simCFG.srate;
+            case 'p3'
+                ix = 0.3*simCFG.srate;
+            case 'n1'
+                ix = 0.2*simCFG.srate;
+        end
+        % Add Impulse
+        simulated_data.(fn{1}).data(1,ix,:) = 1;
+        if simCFG.simulationtype == "ideal_hanning"
+            % convolve with hanning
+            simulated_data.(fn{1}).data(1,:,:) = conv2(squeeze(simulated_data.(fn{1}).data(1,:,:)),hanning(sig.time/5),'same');
+        end
+        end
+        % Random data
         simulated_data.random.data(1,:,:) = randn(1,size(simulated_data.n1.data,2),size(simulated_data.n1.data,3)*3);
-    case 'ideal_hanning'
-        % warning currently p1 p3 and n1 all occur at the same time
-        simulated_data.p1.data(1,:,:) = repmat(hanning(sig.time),1,simCFG.n_events);
-        simulated_data.p3.data(1,:,:) = zeros(sig.time,simCFG.n_events);%repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
-        simulated_data.n1.data(1,:,:) = zeros(sig.time,simCFG.n_events);%repmat([1 zeros(1,sig.time-1)]',1,simCFG.n_events);
-        simulated_data.random.data(1,:,:) =  randn(1,size(simulated_data.n1.data,2),size(simulated_data.n1.data,3)*3);
+        
 end
 
+end
 %% Generate Designmatrix
 % Subject =  1*rand()   + 0.5*slope_rand() +  2*rand() + 2  *slope_rand()
-
-% Intercept, Main Effect A, Main Effect B, Interaction
-X = [ones(1,simCFG.n_events);%  intercept
-    2*randi([0,1],1,simCFG.n_events)-1;%  factor e.g. trialtype
-    2*randi([0,1],1,simCFG.n_events)-1]';
-X(:,end+1) = X(:,2) .* X(:,3); % interaktion
-
+if isfield(simCFG,'X')
+    assert(size(simCFG.X,1)==simCFG.n_events,'the given X has the wrong size')
+    X = simCFG.X;
+else
+    % Intercept, Main Effect A, Main Effect B, Interaction
+    X = [ones(1,simCFG.n_events);%  intercept
+        2*randi([0,1],1,simCFG.n_events)-1;%  factor e.g. trialtype
+        2*randi([0,1],1,simCFG.n_events)-1]';
+    X(:,end+1) = X(:,2) .* X(:,3); % interaktion
+end
 
 adjustedOverlap = X*simCFG.overlapparam';
 % generate overlap
@@ -137,14 +157,21 @@ for fn = fieldnames(simulated_data)'
         continue
     end
     eval(sprintf('b = simCFG.b_%s_2x2;',fn{1}));
+    if simCFG.randomSubject
     eval(sprintf('u = simCFG.u_%s_2x2;',fn{1}));
+    else
+       u = [0,0,0,0]; 
+    end
     % this adds variability per subject
     % Main Effect A and intercept correlated, Main Effect B and Interaction
     % Correlated :shrug:
-    R = [1   0.5   0   0;
-        0.5 1     0   0;
-        0   0     1   0.5;
-        0   0     0.5 1];
+%     R = [1   0.5   0   0;
+%         0.5 1     0   0;
+%         0   0     1   0.5;
+%         0   0     0.5 1];
+    
+    R = eye(length(u));
+    
     D = diag(u);
     Z = mvnrnd([0,0,0,0],D*R*D);
     
@@ -174,8 +201,8 @@ for fn = fieldnames(simulated_data)'
     end
     
     for k = 1:length(EEG.event)
-        EEG.data(:,ix(k):(ix(k)+simCFG.srate*simCFG.epochlength-1)) = EEG.data(:,ix(k):(ix(k)+simCFG.srate*simCFG.epochlength-1))+simdat(:,:,k);
-        
+        to = (ix(k)+simCFG.srate*simCFG.epochlength-1);
+        EEG.data(:,ix(k):to) = EEG.data(:,ix(k):to)+simdat(:,:,k);
     end
     EEG.sim.X = X;
     EEG.sim.Z.(fn{1}) = Z;
@@ -192,7 +219,11 @@ EEG.sim.simCFG = simCFG;
 % To abs or not to abs: I think it actually does not matter (because sign of noise is arbitrary), but I like it
 % if the noise parameter is positive
 if simCFG.noise >0
+    if simCFG.randomSubject
     noiselevel = abs(randn(1)*simCFG.u_noise+simCFG.noise);
+    else
+        noiselevel = simCFG.noise
+    end
     if size(EEG.data,2) > size(simulated_data.random.data(1,:),2)
         
         warning('Overlap is not large enough, need to duplicating noise')

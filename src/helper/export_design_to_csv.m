@@ -1,40 +1,59 @@
-input = load('simulation_ccn_540events.mat');
-input = input.input;
-%%
+function export_design_to_csv(input,EEG,varargin)
+%asda
+cfg = finputcheck(varargin,...
+    {'out_fn','string',[],'';... # outfilename
+    'channel','integer',[],[];... # which channel
+    },'mode','error');
 
-cfgDesign = struct();
-cfgDesign.inputGroupingName='subject';
-cfgDesign.eventtypes= 'sim';
-% cfgDesign.formula= 'y~1+cat(condA)+cat(condB)+(1+cat(condA)+cat(condB)|subject)';
-% cfgDesign.formula= 'y~1 + cat(condA) + (1+cat(condA)|subject)';
-% cfgDesign.formula = 'y~1 + cat(condA)+ (1+cat(condA)|subject)+(1|stimulus)';
-cfgDesign.formula = 'y~1+condA+(1+condA|subject)';
-% cfgDesign.formula = 'y~1+condA+(1+condA|subject)+(1|stimulus)';
-cfgDesign.codingschema = 'effects';
+assert(isfield(EEG.unmixed,'uf_fixef'),'uf_fixef is missing')
 
-EEG = um_designmat(input,cfgDesign);
 
-EEG= um_timeexpandDesignmat(EEG,'timelimits',[-.1,0.5]);
+assert(isfield(EEG.unmixed.uf_fixef,'Xdc'),'No time-expanded designmatrix found');
 
-csvwrite('Xdc.csv',full(EEG.unmixed.uf_fixef.Xdc))
 
-data_y = cellfun(@(x)squeeze(x.data(1,:,:)),input,'UniformOutput',0);
 
-y = double(cat(2,data_y{:})');
-t = array2table(full(EEG.unmixed.uf_fixef.Xdc));
-% Possibly give them a reasonable name at some point
-% t.Properties.VariableNames = 
-t.y = y;
-t.subject = repelem(1:length(input),cellfun(@(x)size(x.data,2),input))';
-writetable(t,'cache/unfold_export.csv')
-%%
-tic
-mres = fitlme(t,'y ~ 1 + Var1 + Var2 + Var3 + Var4 + Var5 + Var6 + Var7 + Var8 + Var9 + Var10 + Var11 + Var12 + Var13 + Var14 + Var15 + Var16 + Var17 + Var18 + Var19 + Var20 + Var21 + Var22 + Var23 + Var24 + (-1 + Var1| subject) + (-1 + Var2| subject) + (-1 + Var3| subject) + (-1 + Var4| subject) + (-1 + Var5| subject) + (-1 + Var6| subject) + (-1 + Var7| subject) + (-1 + Var8| subject) + (-1 + Var9| subject) + (-1 + Var1-1|subject) + (-1 + Var11| subject) + (-1 + Var12| subject) + (-1 + Var13| subject) + (-1 + Var14| subject) + (-1 + Var15| subject) + (-1 +Var16| subject) + (-1 + Var17| subject) + (-1 + Var18| subject) + (-1 + Var19| subject) + (-1 + Var2-1| subject) + (-1 + Var21| subject) + (-1 + Var22| subject) + (-1 + Var23| subject) + (-1 + Var24| subject)')
-toc
-%%
-tic
+    function [t] = makeTableXdc(uf_struct)
+        assert(length(size(input{1}.data))==2)
+        assert(all(cellfun(@(x)size(x.data,1)>=cfg.channel,input)));
+        data_y = cellfun(@(x)squeeze(x.data(cfg.channel,:)),input,'UniformOutput',0);
+        
+        y = double(cat(2,data_y{:})');
+        t = table();
+        tmp_times = cellfun(@(x)x.times,input,'UniformOutput',0)
+        tmp_times = cat(2,tmp_times{:});
+        for c = 1:length(uf_struct.colnames)
+            ix = uf_struct.Xdc_terms2cols==c;
+            Xdc_subset = full(uf_struct.Xdc(:,ix));
+            t_subset = table();
+            t_subset.Xdc =(Xdc_subset(:));
+            
+            t_subset.colnames = repmat(uf_struct.colnames(c),size(t_subset.Xdc));
+            % have to temp it in order to rotate it
+            tmp_tau = repmat(uf_struct.times,size(uf_struct.Xdc,1),1);
+            t_subset.tau= tmp_tau(:);
+            t_subset.times = repmat(tmp_times,1,size(Xdc_subset,2))';
+            t = [t;t_subset];
+        end
+        
+        % Possibly give them a reasonable name at some point
+        % fixefNames = strcat(uf_fixef.colnames(uf_fixef.Xdc_terms2cols),'_',sprintfc('%g',repmat(uf_fixef.times,1,length(uf_fixef.colnames))));
+        t.y = repmat(y,size(uf_struct.Xdc_terms2cols,2),1);
+        t.subject = repmat(repelem(1:length(input),cellfun(@(x)size(x.data,2),input))',size(uf_struct.Xdc_terms2cols,2),1);
+    end
 
-EEG = um_mmfit(EEG,input,'channel',1,'covariance','Diagonal');
-umresult = um_condense(EEG);
+    
+    for r = 1:length(EEG.unmixed.uf_ranef)
+        t_r = makeTableXdc(EEG.unmixed.uf_ranef{r});
+        writetable(t_r,sprintf('cache/%s_ranef-%s.csv',cfg.out_fn,EEG.unmixed.uf_ranef{r}.ranefgrouping),'WriteVariableNames',1)
+    end
+t = makeTableXdc(EEG.unmixed.uf_fixef);
 
-toc
+% end
+writetable(t,sprintf('cache/%s.csv',cfg.out_fn),'WriteVariableNames',1)
+
+%% Export Random Effects
+
+end
+% t2 = unstack(t(t.colnames=="(Intercept)",:),'Xdc',{'tau'});
+% t3 = unstack(t(t.colnames=="condA",:),'Xdc',{'tau'});
+% all(t3{:,4:end} == Xdc_subset)
