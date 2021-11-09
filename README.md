@@ -1,3 +1,7 @@
+# Abandoned
+
+This project is **abandoned** - I would not recommend using it. I'd much rather recommend helping in developung [Unfold.jl](https://github.com/unfoldtoolbox/unfold.jl/) which has already support for MixedModels, albeit with some problems on realistic models (2021-11-09)
+
 # Disclaimer:
 This extension is still being developed and needs optimization for speed and additional tests. **Use at your own risk!**. Probably best to contact me prior to using it to get to know the quirks :-)
 
